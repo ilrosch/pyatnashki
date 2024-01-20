@@ -6,33 +6,38 @@ let counterModal; // Счетчик ходов в модальном окне
 let correctArr = []; // Корректный массив (поле)
 let currentArr = []; // Текущий массив (поле)
 
-// Отслеживаем нажатие кнопки для начала игры
-const btn = document.querySelector('.start-btn');
-btn.addEventListener('click', () => { startGame(); })
+// Закрытие модального окна
+const closeModal = () => {
+  const closes = document.querySelectorAll('.close');
+  const overlay = document.querySelector('.overlay');
+  const modal = document.querySelector('.modal');
 
-// Запускаем игру
-const startGame = () => {
-  const input = document.querySelector('.block-input');
-  const value = Number(input.value);
-  const counter = document.querySelector('.game-counts-span');
+  closes.forEach((close) => {
+    close.addEventListener('click', () => {
+      overlay.classList.remove('open');
+      modal.classList.remove('open');
 
-  if (value >= 3 && value <= 10) {
-    itemsInRow = value;
-    // Положение пустого элемента
-    indexNull = [itemsInRow - 1, itemsInRow - 1];
+      // Обнуление
+      correctArr = [];
+      currentArr = [];
+    });
+  });
+};
 
-    // Обнуление
-    correctArr = [];
-    currentArr = [];
-    counter.dataset.value = 0;
-    counter.textContent = 0;
+// Открытие модального окна
+const openModal = () => {
+  const overlay = document.querySelector('.overlay');
+  const modal = document.querySelector('.modal');
+  const counter = document.querySelector('.modal-count');
 
-    generateArrays();
-    clickItem();
+  overlay.classList.add('open');
+  modal.classList.add('open');
 
-    // Очистка инпута
-    input.value = '';
-  }
+  // Результат
+  counter.textContent = counterModal;
+
+  // Закрытие модального окна
+  closeModal();
 };
 
 const checkArrays = () => {
@@ -46,8 +51,8 @@ const checkArrays = () => {
     }
   }
 
-  // Если массив равны открываем модальное окно
-  openModalFinish();
+  // Если массивы равны открываем модальное окно
+  openModal();
 };
 
 // Функция отрисовки
@@ -57,8 +62,8 @@ const render = (arrs) => {
   // Обнуление перед заполнением
   box.innerHTML = '';
   // Отрисовываем элемент на игровом поле
-  arrs.forEach(arr => {
-    arr.forEach(item => {
+  arrs.forEach((arr) => {
+    arr.forEach((item) => {
       const div = document.createElement('div');
       div.classList.add('game-item');
       div.dataset.item = item;
@@ -72,7 +77,71 @@ const render = (arrs) => {
   checkArrays();
 };
 
-// Функция перемешивания массива 
+// Функция, которая делает ход и проверяет возможность его сделать
+const steps = (item) => {
+  let indexBtn; // Положение элемента [индекс массива; индекс элемента в массиве]
+
+  for (let i = 0; i < currentArr.length; i += 1) {
+    if (currentArr[i].includes(Number(item))) {
+      indexBtn = [i, currentArr[i].indexOf(Number(item))];
+    }
+  }
+
+  // Проверка возможности хода
+  if (((indexNull[0] - 1 === indexBtn[0]
+    || indexNull[0] + 1 === indexBtn[0])
+    && indexNull[1] === indexBtn[1])
+    || (indexNull[0] === indexBtn[0]
+      && (indexNull[1] - 1 === indexBtn[1]
+        || indexNull[1] + 1 === indexBtn[1]))) {
+    // Выполняем перемещени элемента
+    currentArr[indexNull[0]][indexNull[1]] = currentArr[indexBtn[0]][indexBtn[1]];
+    currentArr[indexBtn[0]][indexBtn[1]] = 0;
+    indexNull = indexBtn;
+
+    // Счетчик ходов
+    const counter = document.querySelector('.game-counts-span');
+    counter.dataset.value = Number(counter.dataset.value) + 1;
+    counter.textContent = counter.dataset.value;
+    counterModal = counter.dataset.value;
+
+    // Запускаем отрисовку
+    render(currentArr);
+
+    // eslint-disable-next-line no-use-before-define
+    clickItem();
+  }
+};
+
+// Отслеживаем клики по элементам в поле
+const clickItem = () => {
+  const items = document.querySelectorAll('.game-item');
+
+  items.forEach((item) => {
+    item.addEventListener('click', () => {
+      steps(item.dataset.item);
+    });
+  });
+};
+
+// Проверка на решаемость пятнашки
+const countInversions = () => {
+  let counter = 0;
+  const arr = currentArr.flat();
+  const arrSize = arr.length;
+
+  for (let i = 0; i < arrSize - 1; i += 1) {
+    for (let j = i + 1; j < arrSize; j += 1) {
+      if (arr[i] && arr[j] && arr[i] > arr[j]) {
+        counter += 1;
+      }
+    }
+  }
+
+  return counter;
+};
+
+// Функция перемешивания массива
 const randomItemsInArray = (correctArray) => {
   const randomArr = [...correctArray];
   for (let i = 0; i < randomArr.length; i += 1) {
@@ -119,92 +188,53 @@ const generateArrays = () => {
     rowCurrentArr.push(randomArr[i]);
   }
 
-  // Запускаем отрисовку
-  render(currentArr);
-};
-
-// Функция, которая делает ход и проверяет возможность его сделать
-const steps = (item) => {
-  let indexBtn; // Положение элемента [индекс массива; индекс элемента в массиве]
-
-  for (let i = 0; i < currentArr.length; i += 1) {
-    if (currentArr[i].includes(Number(item))) {
-      indexBtn = [i, currentArr[i].indexOf(Number(item))];
-    }
-  }
-
-  // Проверка возможности хода
-  if (((indexNull[0] - 1 === indexBtn[0] || indexNull[0] + 1 === indexBtn[0]) && indexNull[1] === indexBtn[1]) ||
-    (indexNull[0] === indexBtn[0] && (indexNull[1] - 1 === indexBtn[1] || indexNull[1] + 1 === indexBtn[1]))) {
-    // Выполняем перемещени элемента
-    currentArr[indexNull[0]][indexNull[1]] = currentArr[indexBtn[0]][indexBtn[1]];
-    currentArr[indexBtn[0]][indexBtn[1]] = 0;
-    indexNull = indexBtn;
-
-    // Счетчик ходов
-    const counter = document.querySelector('.game-counts-span');
-    counter.dataset.value = Number(counter.dataset.value) + 1;
-    counter.textContent = counter.dataset.value;
-    counterModal = counter.dataset.value;
-
+  // Проверка на возможность решения
+  // Если количество инверсий четное => возможно решить
+  // Если количество инверсий нечетное => невозможно решить
+  if (countInversions() % 2 === 0) {
     // Запускаем отрисовку
     render(currentArr);
-    clickItem();
+  } else {
+    // Обнуление
+    correctArr = [];
+    currentArr = [];
+    // Генерируем заново
+    generateArrays();
   }
 };
 
-// Отслеживаем клики по элементам в поле
-const clickItem = () => {
-  const items = document.querySelectorAll('.game-item');
+// Запускаем игру
+const startGame = () => {
+  const input = document.querySelector('.block-input');
+  const value = Number(input.value);
+  const counter = document.querySelector('.game-counts-span');
 
-  items.forEach(item => {
-    item.addEventListener('click', () => {
-      steps(item.dataset.item);
-    });
-  });
+  if (value >= 3 && value <= 10) {
+    itemsInRow = value;
+    // Положение пустого элемента
+    indexNull = [itemsInRow - 1, itemsInRow - 1];
+
+    // Обнуление
+    correctArr = [];
+    currentArr = [];
+    counter.dataset.value = 0;
+    counter.textContent = 0;
+
+    generateArrays();
+    clickItem();
+
+    // Очистка инпута
+    input.value = '';
+  }
 };
 
-// Открытие модального окна
-const openModalFinish = () => {
-  const overlay = document.querySelector('.overlay');
-  const modal = document.querySelector('.modal');
-  const counter = document.querySelector('.modal-count');
-
-  overlay.classList.add('open');
-  modal.classList.add('open');
-
-  // Результат
-  counter.textContent = counterModal;
-
-  // Закрытие модального окна
-  closeModal();
-};
-
-// Закрытие модального окна
-const closeModal = () => {
-  const closes = document.querySelectorAll('.close');
-  const overlay = document.querySelector('.overlay');
-  const modal = document.querySelector('.modal');
-
-  closes.forEach(close => {
-    close.addEventListener('click', () => {
-      overlay.classList.remove('open');
-      modal.classList.remove('open');
-
-      // Обнуление
-      correctArr = [];
-      currentArr = [];
-    });
-  });
-};
+// Отслеживаем нажатие кнопки для начала игры
+const btn = document.querySelector('.start-btn');
+btn.addEventListener('click', () => { startGame(); });
 
 // При нажатии на Enter начинаем новую игру
-document.addEventListener("keypress", (e) => {
+document.addEventListener('keypress', (e) => {
   if (e.code === 'Enter') {
     startGame();
   }
 });
-
-
-
-
